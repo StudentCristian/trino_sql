@@ -1,0 +1,47 @@
+name: Trigger auto deployment for trinoserver
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/trinoserver-AutoDeployTrigger-47732092-724f-491c-a5fd-54ac2aeb1694.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.TRINOSERVER_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TRINOSERVER_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TRINOSERVER_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: 
+          registryUsername: ${{ secrets.TRINOSERVER_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.TRINOSERVER_REGISTRY_PASSWORD }}
+          containerAppName: trinoserver
+          resourceGroup: trino-sql
+          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
